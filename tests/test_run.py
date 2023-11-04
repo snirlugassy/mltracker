@@ -33,6 +33,8 @@ class ExperimentRunTest(unittest.TestCase):
         db_exp = session._db.get_experiment_by_id(db_run.experiment)
         self.assertIsInstance(db_exp, mltracker.Experiment)
         self.assertEqual(exp_name, db_exp.name)
+        session.close()
+
 
 if __name__ == "__main__":
     unittest.main()

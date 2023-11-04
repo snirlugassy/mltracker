@@ -43,7 +43,6 @@ class ExperimentTest(unittest.TestCase):
         self.assertIsNone(db.get_experiment_by_name(exp_name))
         self.assertIsNone(db.get_experiment_by_id(exp_id))
         self.assertFalse(os.path.isdir(session.experiment_dir))
-
         session.close()
 
 
