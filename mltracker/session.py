@@ -3,15 +3,13 @@ import shutil
 from typing import Any, Hashable
 from uuid import uuid4
 
-from mltracker import Experiment, Run, Metric, TrackingDatabase
+from mltracker.core.experiment import Experiment
+from mltracker.database import TrackingDatabase
+
 
 def log(*args):
-    print(f"[DEBUG]", *args)
+    print("[DEBUG]", *args)
 
-"""
-TODO:
-- start and stop run seperate from start and stop experiment
-"""
 
 class Session:
     def __init__(self, experiment:str, data_dir="~/.mltracker/") -> None:
@@ -19,7 +17,7 @@ class Session:
 
         self.data_dir = data_dir
         os.makedirs(self.data_dir, exist_ok=True)
-        
+
         self.db_path = os.path.join(data_dir, "mltracker.db")
         self._db = TrackingDatabase(self.db_path)
         self._db.init_db()
@@ -29,6 +27,7 @@ class Session:
         self.run_dir = None
 
         self._experiment = None
+        self._run = None
 
     def _set_experiment(self):
         assert isinstance(self.experiment_name, str)
@@ -46,13 +45,17 @@ class Session:
         # TODO: use adjectives and nouns instead of random characters
         return str(uuid4()).replace("-","")[:10]
 
-    def start(self, run_name:str=None, params:dict={}):
+    def start(self, run_name:str=None, params:dict|None=None):
         # TODO: maybe rename to "start_run"
+        # start and stop run seperate from start and stop experiment
         log("starting experiment", self.experiment_name)
         if run_name is None:
             run_name = Session._random_run_name()
 
         self._set_experiment()
+
+        if params is None:
+            params = {}
 
         self._run = self._db.insert_run(self._experiment.id, run_name, params)
 
@@ -77,20 +80,15 @@ class Session:
         else:
             log(f"{self.experiment_dir} doesn't exists, cant delete files")
             success = False
-        
-        deleted = self._db.remove_experiment(self._experiment.id)
-        if deleted:
-            log(f"deleted experiment {self.experiment_name} from DB")
-        else:
-            log(f"failed to delete experiment {self.experiment_name} from DB")
-            success = False
 
+        self._db.remove_experiment(self._experiment.id)
         self._experiment = None
+        self._run = None
         return success
 
     def log(self, key, value):
         self._db.log_metric(self._run.id, key, value)
-    
+
     def get_experiment_id(self):
         if isinstance(self._experiment, Experiment):
             return self._experiment.id

@@ -8,11 +8,6 @@ from mltracker.core.experiment import Experiment
 from mltracker.core.run import Run
 from mltracker.core.metric import Metric
 
-"""
-TODO:
-- delete aggregrate for all dependent rows
-- maybe move all the query functions to staticmethods on class
-"""
 
 CREATE_EXPERIMENT_TABLE = """
     CREATE TABLE experiment(
@@ -52,13 +47,19 @@ PICKLED_FIELDS = ["params"]
 
 def dict_factory(cursor:sqlite3.Cursor, row:tuple):
     fields = [column[0] for column in cursor.description]
-    x = {key: value for key, value in zip(fields, row)}
+    x = dict(zip(fields, row))
     for k,v in x.items():
         if k in PICKLED_FIELDS and isinstance(v, bytes):
             x[k] = pickle.loads(v)
     return x
 
 class TrackingDatabase:
+    """
+    TODO:
+    - delete aggregrate for all dependent rows
+    - maybe move all the query functions to staticmethods on class
+    """
+
     def __init__(self, db_path:str) -> None:
         self.db_path = db_path
         self._connection: sqlite3.Connection = None
@@ -124,10 +125,11 @@ class TrackingDatabase:
 
         with self._connection:
             self._connection.execute(q, (experiment_name, t, t))
-        
+
         return self.get_experiment_by_name(experiment_name)
 
     def remove_experiment(self, experiment_id:int) -> bool:
+        # TODO: return true or false upon success or fail
         q = f"DELETE FROM {Experiment.__table__} WHERE id=?"
 
         with self._connection:
@@ -192,7 +194,7 @@ class TrackingDatabase:
 
         with self._connection:
             self._connection.execute(q, (run, key, value, time.time()))
-    
+
     def get_all_metrics(self, run:int):
         q = f"SELECT * FROM {Metric.__table__} WHERE run=?"
         with self._connection:
